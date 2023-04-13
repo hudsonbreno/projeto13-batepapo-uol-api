@@ -10,7 +10,7 @@ let participantes = []
 
 
 let db
-const mongoClient = new MongoClient("mongodb://localhost:27017/bate-papo-uol")
+const mongoClient = new MongoClient("mongodb://localhost:27017/batePapoUol")
 mongoClient.connect()
     .then(() => db = mongoClient.db())
     .catch((err) => console.log(err.message))
