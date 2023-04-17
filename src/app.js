@@ -98,10 +98,9 @@ app.post("/messages", async (req, res) => {
     messages["time"]=horario
   
     console.log()
-
-    // const resposta = await db.collection("messages").insertOne(messages);
-    // if(resposta) return res.sendStatus(201)
-    res.send.status(201)
+    const resposta = await db.collection("messages").insertOne(messages);
+    if(resposta) return res.sendStatus(201)
+      res.sendStatus(201)
   } catch (err) {
     res.status(500).send(err.message);
   }
