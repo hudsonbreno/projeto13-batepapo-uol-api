@@ -99,7 +99,7 @@ app.delete("/messages/:id"),
   };
 
 app.post("/status", (req, res) => {
-  //req.header({user})
+  req.header({user})
   //if(isHeader){
   res.send("");
   //} else {
