@@ -11,7 +11,9 @@ app.use(express.json());
 
 let db;
 let participants;
-const mongoClient = new MongoClient("mongodb://127.0.0.1:27017/batePapoUol?directConnection=true&serverSelectionTimeoutMS=2000&appName=mongosh+1.8.0");
+const mongoClient = new MongoClient(
+  "mongodb://127.0.0.1:27017/batePapoUol?directConnection=true&serverSelectionTimeoutMS=2000&appName=mongosh+1.8.0"
+);
 mongoClient
   .connect()
   .then(() => {
@@ -21,23 +23,31 @@ mongoClient
 
 app.post("/participants", async (req, res) => {
   try {
-    const { nome } = req.body;
+    const participante = req.body;
 
     const customerSchema = joi.object({
-        nome:joi.string().required()
+      nome: joi.string().required(),
     });
 
-    const validate = customerSchema.validate(req.body);
+    const validate = customerSchema.validate(participante);
     if (validate.error) return res.sendStatus(422);
 
-    const resposta = await db.collection("participants").findOne({nome:nome}).toArray()
-    console.log(resposta)
-    if (resposta) return res.sendStatus(409)
-    await db.collection("participants").insertOne({nome:nome, lastStatus:Date.now()});
-    return res.sendStatus(201);
-  
-} catch (err) {
+    const resposta = await db
+       .collection("participants")
+       .find({nome:req.body.nome})
+       .toArray();
+       console.log(resposta)
+     if(resposta.length ===0){
+        participante['lastStatus'] = Date.now()
+        await db
+        .collection("participants")
+        .insertOne(participante);
+       res.sendStatus(201);
+     } else{
+        return res.sendStatus(409)
+     }
 
+  } catch (err) {
     console.log("aqui");
     res.sendStatus(500);
   }
@@ -54,62 +64,40 @@ app.get("/participants", async (req, res) => {
 
 app.post("/messages", async (req, res) => {
   const { user } = req.header;
-  
-  const messages = req.body
+
+  const messages = req.body;
 
   const messagesSchema = joi.object({
     to: joi.string().required(),
     text: joi.string().required(),
-    type: joi.string().required()
-  })
-  
-  const { to, text, type } = req.body;
+    type: joi.string().required(),
+  });
+
+  const validation = messagesSchema.validate(messages);
+  if (validation.error) {
+    return res.sendStatus(422);
+  }
 
   try {
-    await db.collection("messages").insertOne({});
+    await db.collection("messages").insertOne(messages);
+    res.send(201)
   } catch (err) {
     res.status(500).send(err.message);
   }
 });
 
-app.get("/messages", (req, res) => {
-  res.send("oi");
+app.get("/messages", async (req, res) => {
+  try{
+    const consultar = await db.collection("messages").find().toArray();
+    res.send(consultar);
+  }
+  catch(err){
+    res.sendStatus(500)
+  }
 });
 
-app.delete("/messages/:id"),
-  async (req, res) => {
-    const { id } = req.params;
-
-    try {
-      const result = await db
-        .colletion("messages")
-        .deleteOne({ _id: new ObjectId(id) });
-      if (result.deletedCount === 0)
-        return res.status(404).send("Item não existe");
-      res.status(204).send("deletado");
-    } catch (err) {
-      res.status(500).send(err);
-    }
-  };
-
-app.delete("/messages/:id"),
-  async (req, res) => {
-    const { id } = req.params;
-
-    try {
-      const result = await db
-        .colletion("messages")
-        .deleteOne({ _id: new ObjectId(id) });
-      if (result.deletedCount === 0)
-        return res.status(404).send("Item não existe");
-      res.status(204).send("deletado");
-    } catch (err) {
-      res.status(500).send(err);
-    }
-  };
-
 app.post("/status", (req, res) => {
-  req.header({user})
+  req.header({ user });
   //if(isHeader){
   res.send("");
   //} else {
