@@ -106,6 +106,7 @@ app.post("/messages", async (req, res) => {
 app.get("/messages", async (req, res) => {
   try{
     const { user } = req.headers;
+    let messagesEsclusivas;
 
     const usuario = await db.collection("participants").find({"name":`${user}`}).toArray()
     if(usuario.length === 0) {
@@ -113,24 +114,24 @@ app.get("/messages", async (req, res) => {
     }
 
     const consultar = await db.collection("messages").find().toArray();
-    res.send(consultar);
+    res.send(messagesEsclusivas);
   }
   catch(err){
     res.sendStatus(500)
   }
 });
 
-app.post("/status", async (req, res) => {
-  const { User } = req.header
+// app.post("/status", async (req, res) => {
+//   const { User } = req.header
 
-  if(User)
-  //if(isHeader){
-  res.send("");
-  //} else {
-  // res.sendStatus(404)
-  //}
-  lastStatus = Date.now();
-});
+//   if(User)
+//   //if(isHeader){
+//   res.send("");
+//   //} else {
+//   // res.sendStatus(404)
+//   //}
+//   lastStatus = Date.now();
+// });
 
 
 app.listen(5000);
