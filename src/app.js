@@ -11,7 +11,7 @@ app.use(express.json());
 
 let db;
 let participants;
-const mongoClient = new MongoClient(process.env.MONGOURL);
+const mongoClient = new MongoClient("mongodb://127.0.0.1:27017/batePapoUol?directConnection=true&serverSelectionTimeoutMS=2000&appName=mongosh+1.8.0");
 mongoClient
   .connect()
   .then(() => {
@@ -99,6 +99,8 @@ app.post("/messages", async (req, res) => {
 
 app.get("/messages", async (req, res) => {
   try{
+    const {user } = req.headers
+
     const consultar = await db.collection("messages").find().toArray();
     res.send(consultar);
   }
