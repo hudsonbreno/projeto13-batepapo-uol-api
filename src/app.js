@@ -11,7 +11,7 @@ app.use(express.json());
 
 let db;
 let participants;
-const mongoClient = new MongoClient(process.env.MONGOURL);
+const mongoClient = new MongoClient("mongodb://127.0.0.1:27017/batePapoUol?directConnection=true&serverSelectionTimeoutMS=2000&appName=mongosh+1.8.0");
 mongoClient
   .connect()
   .then(() => {
@@ -54,7 +54,17 @@ app.get("/participants", async (req, res) => {
 
 app.post("/messages", async (req, res) => {
   const { user } = req.header;
+  
+  const messages = req.body
+
+  const messagesSchema = joi.object({
+    to: joi.string().required(),
+    text: joi.string().required(),
+    type: joi.string().required()
+  })
+  
   const { to, text, type } = req.body;
+
   try {
     await db.collection("messages").insertOne({});
   } catch (err) {
