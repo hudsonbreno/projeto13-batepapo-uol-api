@@ -132,18 +132,57 @@ app.get("/messages", async (req, res) => {
   }
 });
 
-// app.post("/status", async (req, res) => {
-//   const { User } = req.header
+app.post("/status", async (req, res) => {
+  try{
+    const { user } = req.headers
+    const usuario = await db.collection("participants").findOne({name: user})
+    if(!usuario) return res.sendStatus(404)
+    const atualizar = await db.collection("participants").updateOne(
+      {_id:new ObjectId(usuario._id)},
+      {$set: { lastStatus: Date.now()}}
+    )
+    console.log(atualizar)
 
-//   if(User)
-//   //if(isHeader){
-//   res.send("");
-//   //} else {
-//   // res.sendStatus(404)
-//   //}
-//   lastStatus = Date.now();
-// });
+    res.sendStatus(200)
+  }
+  catch(err){
+    res.status(500).send(err.message)
+  }
+});
 
+// setInterval(async () => {
+//   try {
+//     const participantsCollection = dbBatePapoUOL.collection("participants");
+//     const messagesCollection = dbBatePapoUOL.collection("messages");
+//     const participants = await participantsCollection.find({}).toArray();
+
+//     for (const participant of participants) {
+//       if (Date.now() - participant.lastStatus > 10000) {
+//         await participantsCollection.deleteOne({ _id: new ObjectId(participant._id) });
+//         await messagesCollection.insertOne({
+//           from: participant.name,
+//           to: "Todos",
+//           text: "sai da sala...",
+//           type: "status",
+//           time: dayjs().format("HH:mm:ss"),
+//         });
+//       }
+//     }
+//   } catch (error) {
+//     console.error(error);
+//   }
+// }, 15000);
+
+setInterval(async () => {
+  try{
+    const todos = await db.collection("participants").find().toArray()
+    if(!todos) return res.sendStatus(404)
+
+  }
+  catch(err){
+    res.status(500).send(err.message)
+  }
+})
 
 
 app.listen(5000);
