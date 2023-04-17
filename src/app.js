@@ -3,57 +3,67 @@ import cors from "cors"
 import { MongoClient, ObjectId } from "mongodb"
 import dotenv from "dotenv"
 import dayjs from "dayjs"
+import joi from "joi"
 
 const app = express()   //variaveis
 const data = dayjs()
-const hour = data.format('HH:mm:ss')
+const horario = data.format('HH:mm:ss')
 
 app.use(cors())
 app.use(express.json())
 dotenv.config()
-let userName
 
-const mongoClient = new MongoClient(process.env.DATABASE_URL)   //conexão com o banco de dados
+const mongoClient = new MongoClient(process.env.MONGO_URL)   //conexão com o banco de dados
 try {
     await mongoClient.connect()
 } catch (err) {
     console.log(err.message)
 }
 
-const db = mongoClient.db()     //coleções do banco
-const participants = db.collection("participants")
-const messages = db.collection("messages")
+const db = mongoClient.db()
 
 
-app.post("/participants", async (req, res) => {    //Rotas da API
+app.post("/participants", async (req, res) => {
+  try {
+     const participante = req.body;
 
-    const { name } = req.body
-    if (!name || !isNaN(name)) return res.sendStatus(422)
+     const customerSchema = joi.object({
+       name: joi.string().required(),
+     });
 
-    try {
+    const validate = customerSchema.validate(participante);
+    if (validate.error) return res.sendStatus(422);
 
-        const username = await participants.findOne({ name: name })
-        if (username) return res.sendStatus(409)
-        userName = name
-
-        await participants.insertOne({
-            name: name,
-            lastStatus: Date.now()
-        })
-
-        await messages.insertOne({
-            from: name,
+    const resposta = await db
+       .collection("participants")
+       .find({name:req.body.name})
+       .toArray();
+     if(resposta.length ===0){
+        participante['lastStatus'] = Date.now()
+        await db
+        .collection("participants")
+        .insertOne(participante);
+        await db
+        .collection("messages")
+        .insertOne(
+            { 
+            from: `${req.body.name}`,
             to: 'Todos',
             text: 'entra na sala...',
             type: 'status',
-            time: hour
-        })
-        res.sendStatus(201)
-    } catch (err) {
-        res.status(500).send(err.message)
-    }
+            time: horario
+            })
+       res.sendStatus(201);
+     } else{
+        return res.sendStatus(409)
+     }
 
-})
+  } catch (err) {
+    console.log("aqui");
+    res.sendStatus(500);
+  }
+});
+
 app.get("/participants", async (req, res) => {
   try {
     const consultar = await db.collection("participants").find().toArray();
@@ -68,9 +78,9 @@ app.post("/messages", async (req, res) => {
     const { user } = req.headers;
 
     const usuario = await db.collection("participants").find({"name":`${user}`}).toArray()
-
-    if(usuario.length === 0) return res.sendStatus(422)
-
+    if(usuario.length === 0) {
+        return res.sendStatus(422)
+    }
     const messages = req.body;
   
     const messagesSchema = joi.object({
@@ -78,14 +88,16 @@ app.post("/messages", async (req, res) => {
       text: joi.string().required(),
       type: joi.string().required().valid('message', 'private_message'),
     });
-  
+
     const validation = messagesSchema.validate(messages);
     if (validation.error) {
       return res.sendStatus(422);
     }
+    messages["from"]=user
   
     const resposta = await db.collection("messages").insertOne(messages);
     if(resposta) return res.sendStatus(201)
+    res.sendStatus(201)
   } catch (err) {
     res.status(500).send(err.message);
   }
@@ -93,7 +105,12 @@ app.post("/messages", async (req, res) => {
 
 app.get("/messages", async (req, res) => {
   try{
-    const {user } = req.headers
+    const { user } = req.headers;
+
+    const usuario = await db.collection("participants").find({"name":`${user}`}).toArray()
+    if(usuario.length === 0) {
+        return res.sendStatus(422)
+    }
 
     const consultar = await db.collection("messages").find().toArray();
     res.send(consultar);
@@ -103,8 +120,10 @@ app.get("/messages", async (req, res) => {
   }
 });
 
-app.post("/status", (req, res) => {
-  req.header({ user });
+app.post("/status", async (req, res) => {
+  const { User } = req.header
+
+  if(User)
   //if(isHeader){
   res.send("");
   //} else {
@@ -112,5 +131,6 @@ app.post("/status", (req, res) => {
   //}
   lastStatus = Date.now();
 });
+
 
 app.listen(5000);
