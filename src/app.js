@@ -125,7 +125,11 @@ app.get("/messages", async (req, res) => {
         messagesExclusiva.push(element);
       }
     });
-    res.send(messagesExclusiva);
+    if (!limit) {
+      res.send(messagesExclusiva);
+    } else {
+      res.send(messagesExclusiva.slice(-limit));
+    }
   } catch (err) {
     res.sendStatus(500);
   }
