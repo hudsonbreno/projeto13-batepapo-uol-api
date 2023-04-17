@@ -73,6 +73,7 @@ app.get("/participants", async (req, res) => {
     res.sendStatus(500);
   }
 });
+
 app.post("/messages", async (req, res) => {
   try {
     const { user } = req.headers;
@@ -94,10 +95,13 @@ app.post("/messages", async (req, res) => {
       return res.sendStatus(422);
     }
     messages["from"]=user
+    messages["time"]=horario
   
-    const resposta = await db.collection("messages").insertOne(messages);
-    if(resposta) return res.sendStatus(201)
-    res.sendStatus(201)
+    console.log()
+
+    // const resposta = await db.collection("messages").insertOne(messages);
+    // if(resposta) return res.sendStatus(201)
+    res.send.status(201)
   } catch (err) {
     res.status(500).send(err.message);
   }
@@ -108,18 +112,21 @@ app.get("/messages", async (req, res) => {
     const { limit } = req.params
     const { user } = req.headers;
 
-    let messagesEsclusivas;
+    let messagesExclusiva = [];
 
     const usuario = await db.collection("participants").find({"name":`${user}`}).toArray()
     if(usuario.length === 0) {
         return res.sendStatus(422)
     }
+    const filtro = await db.collection("messages").find().toArray();
+    filtro.forEach((element)=>{
 
-    const consultar = await db.collection("messages").find().toArray();
-    consultar.forEach(element => {
-      
-    });
-    res.send(messagesEsclusivas);
+       if(element.to==="Todos"||element.from===user||element.to===user) {
+        messagesExclusiva.push(element)
+       }
+
+    })
+    res.send(messagesExclusiva);
   }
   catch(err){
     res.sendStatus(500)
