@@ -41,6 +41,16 @@ app.post("/participants", async (req, res) => {
         await db
         .collection("participants")
         .insertOne(participante);
+        await db
+        .collection("messages")
+        .insertOne(
+            { 
+            from: `${req.body.name}`,
+            to: 'Todos',
+            text: 'entra na sala...',
+            type: 'status',
+            time: 'HH:mm:ss'
+            })
        res.sendStatus(201);
      } else{
         return res.sendStatus(409)
@@ -62,24 +72,26 @@ app.get("/participants", async (req, res) => {
 });
 
 app.post("/messages", async (req, res) => {
-  const { user } = req.header;
-
-  const messages = req.body;
-
-  const messagesSchema = joi.object({
-    to: joi.string().required(),
-    text: joi.string().required(),
-    type: joi.string().required(),
-  });
-
-  const validation = messagesSchema.validate(messages);
-  if (validation.error) {
-    return res.sendStatus(422);
-  }
-
   try {
-    await db.collection("messages").insertOne(messages);
-    res.send(201)
+    const { user } = req.headers;
+
+    console.log(user)
+
+    const messages = req.body;
+  
+    const messagesSchema = joi.object({
+      to: joi.string().required(),
+      text: joi.string().required(),
+      type: joi.string().required(),
+    });
+  
+    const validation = messagesSchema.validate(messages);
+    if (validation.error) {
+      return res.sendStatus(422);
+    }
+  
+    const resposta = await db.collection("messages").insertOne(messages);
+    if(resposta) return res.sendStatus(201)
   } catch (err) {
     res.status(500).send(err.message);
   }
