@@ -13,7 +13,7 @@ app.use(cors())
 app.use(express.json())
 dotenv.config()
 
-const mongoClient = new MongoClient(process.env.MONGO_URL)   //conexão com o banco de dados
+const mongoClient = new MongoClient(process.env.MONGO_URL)
 try {
     await mongoClient.connect()
 } catch (err) {
@@ -72,66 +72,6 @@ app.get("/participants", async (req, res) => {
     res.sendStatus(500);
   }
 });
-
-app.post("/messages", async (req, res) => {
-  try {
-    const { user } = req.headers;
-
-    const usuario = await db.collection("participants").find({"name":`${user}`}).toArray()
-    if(usuario.length === 0) {
-        return res.sendStatus(422)
-    }
-    const messages = req.body;
-  
-    const messagesSchema = joi.object({
-      to: joi.string().required(),
-      text: joi.string().required(),
-      type: joi.string().required().valid('message', 'private_message'),
-    });
-
-    const validation = messagesSchema.validate(messages);
-    if (validation.error) {
-      return res.sendStatus(422);
-    }
-    messages["from"]=user
-  
-    const resposta = await db.collection("messages").insertOne(messages);
-    if(resposta) return res.sendStatus(201)
-    res.sendStatus(201)
-  } catch (err) {
-    res.status(500).send(err.message);
-  }
-});
-
-app.get("/messages", async (req, res) => {
-  try{
-    const { user } = req.headers;
-    let messagesEsclusivas;
-
-    const usuario = await db.collection("participants").find({"name":`${user}`}).toArray()
-    if(usuario.length === 0) {
-        return res.sendStatus(422)
-    }
-
-    const consultar = await db.collection("messages").find().toArray();
-    res.send(messagesEsclusivas);
-  }
-  catch(err){
-    res.sendStatus(500)
-  }
-});
-
-// app.post("/status", async (req, res) => {
-//   const { User } = req.header
-
-//   if(User)
-//   //if(isHeader){
-//   res.send("");
-//   //} else {
-//   // res.sendStatus(404)
-//   //}
-//   lastStatus = Date.now();
-// });
 
 
 app.listen(5000);
