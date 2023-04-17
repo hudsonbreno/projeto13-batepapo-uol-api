@@ -1,66 +1,111 @@
-import express from "express"
-import cors from "cors"
-import { MongoClient } from "mongodb" 
+import express from "express";
+import cors from "cors";
+import { MongoClient, ObjectId } from "mongodb";
+import dotenv from "dotenv";
+import joi from "joi";
 
+dotenv.config();
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-let participantes = []
+let db;
+let participants;
+const mongoClient = new MongoClient(process.env.MONGOURL);
+mongoClient
+  .connect()
+  .then(() => {
+    db = mongoClient.db();
+  })
+  .catch((err) => console.log(err.message));
 
+app.post("/participants", async (req, res) => {
+  try {
+    const { nome } = req.body;
 
-let db
-const mongoClient = new MongoClient("mongodb://localhost:27017/batePapoUol")
-mongoClient.connect()
-    .then(() => db = mongoClient.db())
-    .catch((err) => console.log(err.message))
+    const customerSchema = joi.object({
+        nome:joi.string().required()
+    });
 
-app.get("/", (req,res)=>{
-    db.collection("teste").find().toArray()
-    .then(teste => res.send(teste))
-    .catch(err => res.status(500).send(err.message))
-})
+    const validate = customerSchema.validate(req.body);
+    if (validate.error) return res.sendStatus(422);
 
-app.post("/participants", (req, res)=>{
-    const { name } = req.body
-    
-    if(!name.includes(participantes)){
-        res.status(409).send("Esse Usuario ja existe!")
-    } else {
-        if(name == []){
-            res.status(422).send("Necessario informar dados")
-        } else {
-            participantes = {...participantes, name}
-            res.status(201).send("Cadastrar participante no MongoDB ,{ name: 'xxx', lastStatus: Date.now() }")
-        }
+    const resposta = await db.collection("participants").findOne({nome:nome}).toArray()
+    console.log(resposta)
+    if (resposta) return res.sendStatus(409)
+    await db.collection("participants").insertOne({nome:nome, lastStatus:Date.now()});
+    return res.sendStatus(201);
+  
+} catch (err) {
+
+    console.log("aqui");
+    res.sendStatus(500);
+  }
+});
+
+app.get("/participants", async (req, res) => {
+  try {
+    const consultar = await db.collection("participants").find().toArray();
+    if (consultar) res.send(consultar);
+  } catch (err) {
+    res.sendStatus(500);
+  }
+});
+
+app.post("/messages", async (req, res) => {
+  const { user } = req.header;
+  const { to, text, type } = req.body;
+  try {
+    await db.collection("messages").insertOne({});
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
+
+app.get("/messages", (req, res) => {
+  res.send("oi");
+});
+
+app.delete("/messages/:id"),
+  async (req, res) => {
+    const { id } = req.params;
+
+    try {
+      const result = await db
+        .colletion("messages")
+        .deleteOne({ _id: new ObjectId(id) });
+      if (result.deletedCount === 0)
+        return res.status(404).send("Item não existe");
+      res.status(204).send("deletado");
+    } catch (err) {
+      res.status(500).send(err);
     }
-    console.log(name)
-    res.send(name)
-})
+  };
 
-app.get("/participants", (req, res)=>{
-    res.send(participantes)
-})
+app.delete("/messages/:id"),
+  async (req, res) => {
+    const { id } = req.params;
 
-app.post("/messages", (req, res)=>{
-    const {to, text, type} = req.body
-    const {User} = req.header
-    
-})
+    try {
+      const result = await db
+        .colletion("messages")
+        .deleteOne({ _id: new ObjectId(id) });
+      if (result.deletedCount === 0)
+        return res.status(404).send("Item não existe");
+      res.status(204).send("deletado");
+    } catch (err) {
+      res.status(500).send(err);
+    }
+  };
 
-app.get("/messages", (req, res)=>{
-    res.send("oi")
-})
+app.post("/status", (req, res) => {
+  //req.header({user})
+  //if(isHeader){
+  res.send("");
+  //} else {
+  // res.sendStatus(404)
+  //}
+  lastStatus = Date.now();
+});
 
-app.post("/status", (req, res)=>{
-    //req.header({user})
-    //if(isHeader){
-        res.send("")
-    //} else {
-        // res.sendStatus(404)
-    //}
-    lastStatus = Date.now()
-    
-})
-
-app.listen(5000)
+app.listen(5000);
