@@ -1,65 +1,59 @@
-import express from "express";
-import cors from "cors";
-import { MongoClient, ObjectId } from "mongodb";
-import dotenv from "dotenv";
-import joi from "joi";
+import express from "express"
+import cors from "cors"
+import { MongoClient, ObjectId } from "mongodb"
+import dotenv from "dotenv"
+import dayjs from "dayjs"
 
-dotenv.config();
-const app = express();
-app.use(cors());
-app.use(express.json());
+const app = express()   //variaveis
+const data = dayjs()
+const hour = data.format('HH:mm:ss')
 
-let db;
-let participants;
-const mongoClient = new MongoClient("mongodb://127.0.0.1:27017/batePapoUol?directConnection=true&serverSelectionTimeoutMS=2000&appName=mongosh+1.8.0");
-mongoClient
-  .connect()
-  .then(() => {
-    db = mongoClient.db();
-  })
-  .catch((err) => console.log(err.message));
+app.use(cors())
+app.use(express.json())
+dotenv.config()
+let userName
 
-app.post("/participants", async (req, res) => {
-  try {
-    const participante = req.body;
+const mongoClient = new MongoClient(process.env.DATABASE_URL)   //conexão com o banco de dados
+try {
+    await mongoClient.connect()
+} catch (err) {
+    console.log(err.message)
+}
 
-    const customerSchema = joi.object({
-      name: joi.string().required(),
-    });
+const db = mongoClient.db()     //coleções do banco
+const participants = db.collection("participants")
+const messages = db.collection("messages")
 
-    const validate = customerSchema.validate(participante);
-    if (validate.error) return res.sendStatus(422);
 
-    const resposta = await db
-       .collection("participants")
-       .find({name:req.body.name})
-       .toArray();
-     if(resposta.length ===0){
-        participante['lastStatus'] = Date.now()
-        await db
-        .collection("participants")
-        .insertOne(participante);
-        await db
-        .collection("messages")
-        .insertOne(
-            { 
-            from: `${req.body.name}`,
+app.post("/participants", async (req, res) => {    //Rotas da API
+
+    const { name } = req.body
+    if (!name || !isNaN(name)) return res.sendStatus(422)
+
+    try {
+
+        const username = await participants.findOne({ name: name })
+        if (username) return res.sendStatus(409)
+        userName = name
+
+        await participants.insertOne({
+            name: name,
+            lastStatus: Date.now()
+        })
+
+        await messages.insertOne({
+            from: name,
             to: 'Todos',
             text: 'entra na sala...',
             type: 'status',
-            time: 'HH:mm:ss'
-            })
-       res.sendStatus(201);
-     } else{
-        return res.sendStatus(409)
-     }
+            time: hour
+        })
+        res.sendStatus(201)
+    } catch (err) {
+        res.status(500).send(err.message)
+    }
 
-  } catch (err) {
-    console.log("aqui");
-    res.sendStatus(500);
-  }
-});
-
+})
 app.get("/participants", async (req, res) => {
   try {
     const consultar = await db.collection("participants").find().toArray();
@@ -73,7 +67,7 @@ app.post("/messages", async (req, res) => {
   try {
     const { user } = req.headers;
 
-    const usuario = await db.colletion("messages").find(user).toArray()
+    const usuario = await db.collection("participants").find({"name":`${user}`}).toArray()
 
     if(usuario.length === 0) return res.sendStatus(422)
 
