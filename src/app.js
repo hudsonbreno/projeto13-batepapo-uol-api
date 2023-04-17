@@ -26,7 +26,7 @@ app.post("/participants", async (req, res) => {
     const participante = req.body;
 
     const customerSchema = joi.object({
-      nome: joi.string().required(),
+      name: joi.string().required(),
     });
 
     const validate = customerSchema.validate(participante);
@@ -34,9 +34,8 @@ app.post("/participants", async (req, res) => {
 
     const resposta = await db
        .collection("participants")
-       .find({nome:req.body.nome})
+       .find({name:req.body.name})
        .toArray();
-       console.log(resposta)
      if(resposta.length ===0){
         participante['lastStatus'] = Date.now()
         await db
