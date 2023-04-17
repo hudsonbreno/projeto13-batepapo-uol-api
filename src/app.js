@@ -11,9 +11,7 @@ app.use(express.json());
 
 let db;
 let participants;
-const mongoClient = new MongoClient(
-  "mongodb://127.0.0.1:27017/batePapoUol?directConnection=true&serverSelectionTimeoutMS=2000&appName=mongosh+1.8.0"
-);
+const mongoClient = new MongoClient(process.env.MONGOURL);
 mongoClient
   .connect()
   .then(() => {
@@ -75,14 +73,16 @@ app.post("/messages", async (req, res) => {
   try {
     const { user } = req.headers;
 
-    console.log(user)
+    const usuario = await db.colletion("messages").find(user).toArray()
+
+    if(usuario.length === 0) return res.sendStatus(422)
 
     const messages = req.body;
   
     const messagesSchema = joi.object({
       to: joi.string().required(),
       text: joi.string().required(),
-      type: joi.string().required(),
+      type: joi.string().required().valid('message', 'private_message'),
     });
   
     const validation = messagesSchema.validate(messages);
